@@ -1,10 +1,13 @@
 import numpy as np
 from scipy import signal
+from scipy import integrate
+from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 tmin = 0
 tmax = 105
 t = np.linspace(tmin, tmax, tmax, endpoint=False)
+print(t)
 
 def PULSE(start, end, height, t):
     return np.heaviside(t - start, 0) * height - np.heaviside(t - end, 1) * height
@@ -19,8 +22,8 @@ Cl = 0                                        # number of bees in the right cage
 L0 = 0                                        # Initial number of bees aggregated on left side
 F0 = 24                                       # Initial number of bees running freely
 R0 = 0                                        # Initial number of bees aggregated on right side
-tmin = 0                                      # start with this value of the independent variable (t)
-tmax = 105                                    # run for this number of time steps
+# tmin = 0                                      # start with this value of the independent variable (t)
+# tmax = 100                                    # run for this number of time steps
 
 #two functions for the temperature profile
 def Tl(t):
@@ -61,12 +64,48 @@ def Wartezeit(Temp):
 
 # plt.plot(Temp, Wartezeit(Temp))
 # plt.show()
+initial =  [L0, F0, R0]
 
-def deL(L, t):
-    return x1 * (F ** 2) + x1 * F * (L + x2 * Cl) - L / (Wl(t))
+def Diff_EQ(t, y):
+    L, F, R = y
+    deL = x1 * (F ** 2) + x1 * F * (L + x2 * Cl) - L / (Wl(t))
+    deF = L / (Wl(t)) + R / (Wr(t)) - x1 * (F ** 2) - x1 * F * (L + x2 * Cl) - x1 * (F ** 2) - x1 * F * (R + x2 * Cr)
+    deR = x1 * (F ** 2) + x1 * F * (R + x2 * Cr) - R / (Wr(t))
+    # deL = np.diff(L,t) == x1 * (F ** 2) + x1 * F * (L + x2 * Cl) - L / (Wl(t))
+    # deF = np.diff(F,t) == L / (Wl(t)) + R / (Wr(t)) - x1 * (F ** 2) - x1 * F * (L + x2 * Cl) - x1 * (F ** 2) - x1 * F * (R + x2 * Cr)
+    # deR = np.diff(R,t) == x1 * (F ** 2) + x1 * F * (R + x2 * Cr) - R / (Wr(t))
+    return [deL, deF, deR]
 
-def deF(F, t):
-    return L / (Wl(t)) + R / (Wr(t)) - x1 * (F ** 2) - x1 * F * (L + x2 * Cl) - x1 * (F ** 2) - x1 * F * (R + x2 * Cr)
+# def deL(t, L):
+#     return np.diff(np.array([x1 * (F ** 2) + x1 * F * (L + x2 * Cl) - L / (Wl(t))]))
+# #
+# def deF(t, F):
+#     return np.diff(np.array([L / (Wl(t)) + R / (Wr(t)) - x1 * (F ** 2) - x1 * F * (L + x2 * Cl) - x1 * (F ** 2) - x1 * F * (R + x2 * Cr)]))
+# #
+# def deR(t, R):
+#     return np.diff(np.array([x1 * (F ** 2) + x1 * F * (R + x2 * Cr) - R / (Wr(t))]))
 
-def deR(R, t):
-    return x1 * (F ** 2) + x1 * F * (R + x2 * Cr) - R / (Wr(t))
+
+P = integrate.solve_ivp(Diff_EQ, [tmin, tmax], initial, method='RK45')
+# P = integrate.RK45(Diff_EQ, tmin, initial, tmax, 0.01)
+print(P.t, P.y[0], P.y[1], P.y[2])
+print(P)
+
+
+# Q1=[[t,L] for t,L,F,R in P]
+# LP1=list_plot(Q1, color='red', plotjoined=True, legend_label='Left aggregated bees', linestyle='-.' )
+#
+# Q2=[[t,F] for t,L,F,R in P]
+# LP2=list_plot(Q2, color='green', plotjoined=True, legend_label='Free running bees', linestyle='--')
+#
+# Q3=[[t,R] for t,L,F,R in P]
+# LP3=list_plot(Q3, color='blue', plotjoined=True, legend_label='Right aggregated bees', linestyle=':')
+#
+# LP = LP1+LP2+LP3
+# LP.axes_labels(['time [min]','bees'])
+# #LP.axes_width(2)
+# show(LP)
+plt.plot(P.t, P.y[0])
+plt.plot(P.t, P.y[1])
+plt.plot(P.t, P.y[2])
+plt.show()
